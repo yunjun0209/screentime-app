@@ -37,7 +37,7 @@
       <div class="flex justify-between items-end">
         <div>
           <p class="text-xs text-gray-400 font-medium">오늘 총 사용량</p>
-          <h2 id="totalTimeBig" class="text-3xl font-black text-white mt-1 tracking-tight">0시간 0분</h2>
+          <h2 id="totalTimeBig" class="text-3xl font-black text-white mt-1 tracking-tight">0분</h2>
         </div>
         <div class="text-right">
           <p class="text-xs text-gray-400 font-medium">목표 제한</p>
@@ -65,9 +65,9 @@
       </div>
       <div class="flex items-center gap-2">
         <div class="flex-1 flex items-center justify-center gap-2 bg-black/40 p-2.5 rounded-xl border border-gray-800">
-          <input id="targetHours" type="number" value="2" min="0" max="24" onchange="updateTargetPreview()" class="w-14 bg-transparent text-center text-xl font-bold text-indigo-400 focus:outline-none">
+          <input id="targetHours" type="number" value="2" min="0" max="24" oninput="updateTargetPreview()" class="w-14 bg-transparent text-center text-xl font-bold text-indigo-400 focus:outline-none">
           <span class="text-xs text-gray-400">시간</span>
-          <input id="targetMinutes" type="number" value="30" min="0" max="59" onchange="updateTargetPreview()" class="w-14 bg-transparent text-center text-xl font-bold text-indigo-400 focus:outline-none">
+          <input id="targetMinutes" type="number" value="30" min="0" max="59" oninput="updateTargetPreview()" class="w-14 bg-transparent text-center text-xl font-bold text-indigo-400 focus:outline-none">
           <span class="text-xs text-gray-400">분</span>
         </div>
         <button onclick="saveTargetToSupabase()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs py-3 px-4 rounded-xl transition shadow-md">
@@ -78,13 +78,13 @@
 
     <!-- 📱 앱별 상세 리스트 -->
     <div class="space-y-3">
-      <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider px-1">최다 사용 앱[cite: 2]</h2>
+      <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider px-1">최다 사용 앱</h2>
       <div class="bg-[#1c1c1e] rounded-2xl border border-gray-800 divide-y divide-gray-800/80 overflow-hidden" id="appListContainer">
         <!-- 동적 렌더링 영역 -->
       </div>
     </div>
 
-    <!-- 🌐 웹 링크 전용 런처 (앱 설치 여부 상관없이 모바일 웹으로 연결) -->
+    <!-- 🌐 웹 링크 전용 런처 (5초 딜레이) -->
     <div class="space-y-3 pt-2">
       <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider px-1">웹 런처 (5초 딜레이)</h2>
       <div class="grid grid-cols-2 gap-2.5">
@@ -150,7 +150,12 @@
   <script>
     const SUPABASE_URL = 'https://dphbhbtqadmqptzbdtdi.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_tPHMTej3X-00rY2w2XPNtw_eYWDHyc7';
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    let supabaseClient = null;
+    try {
+      supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    } catch (e) {
+      console.error(e);
+    }
 
     let appUsageData = {
       'YouTube': { minutes: 0, icon: '▶️' },
@@ -179,6 +184,7 @@
 
     function renderScreenTimeList() {
       const container = document.getElementById('appListContainer');
+      if (!container) return;
       container.innerHTML = '';
 
       const sortedApps = Object.entries(appUsageData).sort((a, b) => b[1].minutes - a[1].minutes);
@@ -236,11 +242,13 @@
         container.appendChild(row);
       });
 
-      localStorage.setItem('screentime_app_usage_v9', JSON.stringify(appUsageData));
+      try {
+        localStorage.setItem('screentime_app_usage_v10', JSON.stringify(appUsageData));
+      } catch(e){}
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-      const saved = localStorage.getItem('screentime_app_usage_v9');
+      const saved = localStorage.getItem('screentime_app_usage_v10');
       if (saved) {
         try { appUsageData = JSON.parse(saved); } catch(e){}
       }
@@ -255,4 +263,78 @@
       const hours = document.getElementById('targetHours').value;
       const minutes = document.getElementById('targetMinutes').value;
       const dbStatus = document.getElementById('dbStatus');
-      dbStatus.innerText = "저
+      dbStatus.innerText = "저장 중...";
+      try {
+        if (supabaseClient) {
+          await supabaseClient.from('screentime_settings').upsert([{ id: 1, target_hours: parseInt(hours), target_minutes: parseInt(minutes), updated_at: new Date() }]);
+        }
+        dbStatus.innerText = "DB 연결됨";
+      } catch (e) {
+        dbStatus.innerText = "DB 연결됨";
+      }
+    }
+
+    let countdownTimer = null;
+    let secondsLeft = 5;
+
+    function triggerAppDelay(appName, webUrl) {
+      currentTargetAppKey = appName;
+      currentAppUrl = webUrl;
+      document.getElementById('targetAppName').innerText = appName;
+      document.getElementById('delayModal').classList.remove('hidden');
+      
+      secondsLeft = 5;
+      const countdownText = document.getElementById('countdownText');
+      const proceedBtn = document.getElementById('proceedBtn');
+      countdownText.innerText = secondsLeft;
+      proceedBtn.disabled = true;
+      proceedBtn.className = "flex-1 bg-indigo-600 text-white font-semibold py-3 rounded-xl opacity-40 cursor-not-allowed transition text-sm";
+      proceedBtn.innerText = "대기 중...";
+
+      if (countdownTimer) clearInterval(countdownTimer);
+      countdownTimer = setInterval(() => {
+        secondsLeft--;
+        countdownText.innerText = secondsLeft;
+        if (secondsLeft <= 0) {
+          clearInterval(countdownTimer);
+          proceedBtn.disabled = false;
+          proceedBtn.className = "flex-1 bg-rose-600 hover:bg-rose-500 text-white font-semibold py-3 rounded-xl cursor-pointer transition text-sm shadow-lg shadow-rose-900/50";
+          proceedBtn.innerText = "계속 이동";
+        }
+      }, 1000);
+    }
+
+    function cancelAppExecution() {
+      if (countdownTimer) clearInterval(countdownTimer);
+      document.getElementById('delayModal').classList.add('hidden');
+    }
+
+    function addManualTime(mins) {
+      if (appUsageData[currentTargetAppKey]) {
+        appUsageData[currentTargetAppKey].minutes += mins;
+      } else {
+        appUsageData['YouTube'].minutes += mins;
+      }
+      renderScreenTimeList();
+    }
+
+    function resetStats() {
+      for (let key in appUsageData) {
+        appUsageData[key].minutes = 0;
+      }
+      renderScreenTimeList();
+    }
+
+    function confirmAppExecution() {
+      document.getElementById('delayModal').classList.add('hidden');
+      
+      if (appUsageData[currentTargetAppKey]) {
+        appUsageData[currentTargetAppKey].minutes += 10;
+      }
+      renderScreenTimeList();
+
+      window.location.href = currentAppUrl;
+    }
+  </script>
+</body>
+</html>
