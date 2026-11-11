@@ -7,27 +7,61 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-gray-900 text-white min-h-screen flex flex-col items-center justify-center p-6">
-  <div class="max-w-md w-full bg-gray-800 p-8 rounded-2xl shadow-xl border border-gray-700 text-center">
-    <h1 class="text-3xl font-bold mb-2 text-indigo-400">도파민 컷 ⏱️</h1>
-    <p class="text-gray-400 mb-6">스마트폰 사용 시간을 줄이고 몰입을 시작하세요.</p>
+<body class="bg-gray-900 text-white min-h-screen flex flex-col items-center justify-center p-4">
+  <div class="max-w-md w-full bg-gray-800 p-6 rounded-2xl shadow-xl border border-gray-700 space-y-6">
     
-    <div class="bg-gray-900 p-6 rounded-xl border border-gray-700 mb-6">
-      <p class="text-sm text-gray-400 mb-1">오늘의 목표 스크린타임</p>
-      <div class="text-4xl font-extrabold text-green-400 mb-2">02 시간 30 분</div>
-      <p class="text-xs text-gray-500">Supabase DB 연동 완료</p>
+    <!-- Header -->
+    <div class="text-center">
+      <h1 class="text-3xl font-bold text-indigo-400">도파민 컷 ⏱️</h1>
+      <p class="text-gray-400 text-sm mt-1">스마트폰 몰입을 끊고 진짜 시간에 집중하세요.</p>
     </div>
 
-    <button class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 px-4 rounded-xl transition duration-200 shadow-lg">
-      스크린타임 측정 시작하기
-    </button>
+    <!-- 2. Supabase DB 연동: 목표 스크린타임 설정 -->
+    <div class="bg-gray-900 p-5 rounded-xl border border-gray-700 text-center">
+      <p class="text-xs text-gray-400 mb-2">오늘의 목표 스크린타임 (Supabase DB 연동)</p>
+      <div class="flex items-center justify-center gap-2 mb-3">
+        <input id="targetHours" type="number" value="2" min="0" max="24" class="w-16 bg-gray-800 text-center text-xl font-bold border border-gray-600 rounded-lg p-1 text-green-400 focus:outline-none focus:border-indigo-500">
+        <span class="text-gray-300 font-bold">시간</span>
+        <input id="targetMinutes" type="number" value="30" min="0" max="59" class="w-16 bg-gray-800 text-center text-xl font-bold border border-gray-600 rounded-lg p-1 text-green-400 focus:outline-none focus:border-indigo-500">
+        <span class="text-gray-300 font-bold">분</span>
+      </div>
+      <button onclick="saveTargetToSupabase()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-2 px-3 rounded-lg transition duration-200">
+        Supabase DB에 목표 시간 저장
+      </button>
+      <p id="dbStatus" class="text-xs text-gray-400 mt-2">Supabase 클라이언트가 정상 연결되었습니다.</p>
+    </div>
+
+    <!-- 3. 차단 앱 목록 & 5초 딜레이 모달 테스트 -->
+    <div class="bg-gray-900 p-5 rounded-xl border border-gray-700">
+      <h2 class="text-sm font-semibold text-gray-300 mb-3 flex items-center justify-between">
+        <span>🚫 차단 대상 앱 시뮬레이터</span>
+        <span class="text-xs text-rose-400 font-mono">5초 딜레이</span>
+      </h2>
+      <div class="space-y-2">
+        <div class="flex items-center justify-between p-3 bg-gray-800 rounded-xl border border-gray-700">
+          <span class="text-sm font-medium text-gray-200">유튜브 (YouTube)</span>
+          <button onclick="triggerAppDelay('유튜브')" class="bg-rose-600 hover:bg-rose-500 text-white text-xs px-3 py-1.5 rounded-lg font-medium transition">
+            실행 시도
+          </button>
+        </div>
+        <div class="flex items-center justify-between p-3 bg-gray-800 rounded-xl border border-gray-700">
+          <span class="text-sm font-medium text-gray-200">인스타그램 (Instagram)</span>
+          <button onclick="triggerAppDelay('인스타그램')" class="bg-rose-600 hover:bg-rose-500 text-white text-xs px-3 py-1.5 rounded-lg font-medium transition">
+            실행 시도
+          </button>
+        </div>
+        <div class="flex items-center justify-between p-3 bg-gray-800 rounded-xl border border-gray-700">
+          <span class="text-sm font-medium text-gray-200">웹 브라우저 (Safari)</span>
+          <button onclick="triggerAppDelay('웹 브라우저')" class="bg-rose-600 hover:bg-rose-500 text-white text-xs px-3 py-1.5 rounded-lg font-medium transition">
+            실행 시도
+          </button>
+        </div>
+      </div>
+    </div>
+
   </div>
 
-  <script>
-    const SUPABASE_URL = 'https://dphbhbtqadmqptzbdtdi.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_tPHMTej3X-00rY2w2XPNtw_eYWDHyc7';
-    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    console.log("Supabase 연동 성공!");
-  </script>
-</body>
-</html>
+  <!-- 5초 딜레이 팝업(모달) UI -->
+  <div id="delayModal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center hidden p-4 z-50">
+    <div class="bg-gray-800 border border-gray-700 p-6 rounded-2xl max-w-sm w-full text-center shadow-2xl space-y-4">
+      <div class="text-4xl animate-bounce">🛑
