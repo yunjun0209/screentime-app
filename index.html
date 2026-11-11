@@ -25,7 +25,7 @@
     <div class="flex items-center justify-between pt-2 pb-2 border-b border-gray-800">
       <div>
         <h1 class="text-2xl font-bold tracking-tight">스크린 타임</h1>
-        <p class="text-xs text-gray-400 mt-0.5">도파민 컷 웹 런처</p>
+        <p class="text-xs text-gray-400 mt-0.5">체류 시간 자동 측정 런처</p>
       </div>
       <button onclick="toggleGrayscale()" class="bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-700 transition">
         👁️ 흑백 모드
@@ -84,7 +84,7 @@
       </div>
     </div>
 
-    <!-- 🌐 웹 링크 전용 런처 (5초 딜레이) -->
+    <!-- 🌐 웹 런처 (체류 시간 자동 측정 연동) -->
     <div class="space-y-3 pt-2">
       <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider px-1">웹 런처 (5초 딜레이)</h2>
       <div class="grid grid-cols-2 gap-2.5">
@@ -107,14 +107,8 @@
       </div>
       
       <div class="pt-2 flex gap-2">
-        <button onclick="addManualTime(30)" class="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs py-2 rounded-xl border border-gray-700 transition font-bold">
-          + 30분 추가 테스트
-        </button>
-        <button onclick="addManualTime(60)" class="flex-1 bg-indigo-950 hover:bg-indigo-900 text-indigo-300 text-xs py-2 rounded-xl border border-indigo-700 transition font-bold">
-          + 1시간 추가 테스트
-        </button>
-        <button onclick="resetStats()" class="bg-rose-950/50 hover:bg-rose-900 text-rose-300 text-xs px-4 py-2 rounded-xl border border-rose-900 transition font-bold">
-          초기화
+        <button onclick="resetStats()" class="w-full bg-rose-950/50 hover:bg-rose-900 text-rose-300 text-xs py-2.5 rounded-xl border border-rose-900 transition font-bold">
+          기록 초기화
         </button>
       </div>
     </div>
@@ -153,9 +147,7 @@
     let supabaseClient = null;
     try {
       supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    } catch (e) {
-      console.error(e);
-    }
+    } catch (e) {}
 
     let appUsageData = {
       'YouTube': { minutes: 0, icon: '▶️' },
@@ -243,12 +235,33 @@
       });
 
       try {
-        localStorage.setItem('screentime_app_usage_v10', JSON.stringify(appUsageData));
+        localStorage.setItem('screentime_app_usage_v11', JSON.stringify(appUsageData));
       } catch(e){}
     }
 
+    // [핵심] 사용자가 외부 사이트로 나갔다가 다시 우리 앱(도파민 컷)으로 돌아올 때 체류 시간 자동 계산
+    window.addEventListener('pageshow', function(event) {
+      const leftTime = localStorage.getItem('dopamine_left_time');
+      const activeApp = localStorage.getItem('dopamine_active_app');
+
+      if (leftTime && activeApp) {
+        const durationSec = Math.floor((Date.now() - parseInt(leftTime, 10)) / 1000);
+        // 5초 이상 머물렀을 때만 유효한 사용 시간으로 인정 (분 단위 변환, 최소 1분 이상)
+        const durationMins = Math.max(Math.round(durationSec / 60), 1);
+
+        if (durationSec > 5 && appUsageData[activeApp]) {
+          appUsageData[activeApp].minutes += durationMins;
+          renderScreenTimeList();
+        }
+
+        // 측정 완료 후 초기화
+        localStorage.removeItem('dopamine_left_time');
+        localStorage.removeItem('dopamine_active_app');
+      }
+    });
+
     window.addEventListener('DOMContentLoaded', () => {
-      const saved = localStorage.getItem('screentime_app_usage_v10');
+      const saved = localStorage.getItem('screentime_app_usage_v11');
       if (saved) {
         try { appUsageData = JSON.parse(saved); } catch(e){}
       }
@@ -309,15 +322,6 @@
       document.getElementById('delayModal').classList.add('hidden');
     }
 
-    function addManualTime(mins) {
-      if (appUsageData[currentTargetAppKey]) {
-        appUsageData[currentTargetAppKey].minutes += mins;
-      } else {
-        appUsageData['YouTube'].minutes += mins;
-      }
-      renderScreenTimeList();
-    }
-
     function resetStats() {
       for (let key in appUsageData) {
         appUsageData[key].minutes = 0;
@@ -328,11 +332,11 @@
     function confirmAppExecution() {
       document.getElementById('delayModal').classList.add('hidden');
       
-      if (appUsageData[currentTargetAppKey]) {
-        appUsageData[currentTargetAppKey].minutes += 10;
-      }
-      renderScreenTimeList();
+      // 외부로 나가는 시점의 시간과 앱 이름을 기록
+      localStorage.setItem('dopamine_left_time', Date.now().toString());
+      localStorage.setItem('dopamine_active_app', currentTargetAppKey);
 
+      // 외부 웹사이트로 이동
       window.location.href = currentAppUrl;
     }
   </script>
