@@ -25,7 +25,7 @@
     <div class="flex items-center justify-between pt-2 pb-2 border-b border-gray-800">
       <div>
         <h1 class="text-2xl font-bold tracking-tight">스크린 타임</h1>
-        <p class="text-xs text-gray-400 mt-0.5">도파민 컷 런처 연동 통계</p>
+        <p class="text-xs text-gray-400 mt-0.5">도파민 컷 웹 런처</p>
       </div>
       <button onclick="toggleGrayscale()" class="bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-700 transition">
         👁️ 흑백 모드
@@ -45,7 +45,7 @@
         </div>
       </div>
 
-      <!-- 전체 사용량 프로그레스 바 (비주얼 그래프) -->
+      <!-- 전체 사용량 프로그레스 바 -->
       <div class="space-y-1.5">
         <div class="w-full bg-black/60 h-3.5 rounded-full overflow-hidden border border-gray-800 p-0.5">
           <div id="totalProgressBar" class="bg-indigo-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
@@ -76,32 +76,31 @@
       </div>
     </div>
 
-    <!-- 📱 아이폰 스크린타임 스타일의 '최다 사용' 앱별 상세 리스트 -->
+    <!-- 📱 앱별 상세 리스트 -->
     <div class="space-y-3">
       <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider px-1">최다 사용 앱[cite: 2]</h2>
-
       <div class="bg-[#1c1c1e] rounded-2xl border border-gray-800 divide-y divide-gray-800/80 overflow-hidden" id="appListContainer">
         <!-- 동적 렌더링 영역 -->
       </div>
     </div>
 
-    <!-- 🚫 텍스트 전용 런처 (5초 딜레이 실행) -->
+    <!-- 🌐 웹 링크 전용 런처 (앱 설치 여부 상관없이 모바일 웹으로 연결) -->
     <div class="space-y-3 pt-2">
-      <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider px-1">앱 실행 런처 (5초 딜레이)</h2>
+      <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider px-1">웹 런처 (5초 딜레이)</h2>
       <div class="grid grid-cols-2 gap-2.5">
-        <button onclick="triggerAppDelay('YouTube', 'youtube://')" class="bg-[#1c1c1e] hover:bg-gray-800 p-3.5 rounded-xl border border-gray-800 text-left transition flex items-center justify-between">
+        <button onclick="triggerAppDelay('YouTube', 'https://m.youtube.com')" class="bg-[#1c1c1e] hover:bg-gray-800 p-3.5 rounded-xl border border-gray-800 text-left transition flex items-center justify-between">
           <span class="font-bold text-sm text-gray-200">YouTube</span>
           <span class="text-[10px] text-rose-400 bg-rose-950/60 px-2 py-0.5 rounded border border-rose-900/50">5초 대기</span>
         </button>
-        <button onclick="triggerAppDelay('Instagram', 'instagram://')" class="bg-[#1c1c1e] hover:bg-gray-800 p-3.5 rounded-xl border border-gray-800 text-left transition flex items-center justify-between">
+        <button onclick="triggerAppDelay('Instagram', 'https://www.instagram.com')" class="bg-[#1c1c1e] hover:bg-gray-800 p-3.5 rounded-xl border border-gray-800 text-left transition flex items-center justify-between">
           <span class="font-bold text-sm text-gray-200">Instagram</span>
           <span class="text-[10px] text-rose-400 bg-rose-950/60 px-2 py-0.5 rounded border border-rose-900/50">5초 대기</span>
         </button>
-        <button onclick="triggerAppDelay('KakaoTalk', 'kakaotalk://')" class="bg-[#1c1c1e] hover:bg-gray-800 p-3.5 rounded-xl border border-gray-800 text-left transition flex items-center justify-between">
-          <span class="font-bold text-sm text-gray-200">카카오톡</span>
+        <button onclick="triggerAppDelay('ChatGPT', 'https://chatgpt.com')" class="bg-[#1c1c1e] hover:bg-gray-800 p-3.5 rounded-xl border border-gray-800 text-left transition flex items-center justify-between">
+          <span class="font-bold text-sm text-gray-200">ChatGPT</span>
           <span class="text-[10px] text-rose-400 bg-rose-950/60 px-2 py-0.5 rounded border border-rose-900/50">5초 대기</span>
         </button>
-        <button onclick="triggerAppDelay('Netflix', 'nflx://')" class="bg-[#1c1c1e] hover:bg-gray-800 p-3.5 rounded-xl border border-gray-800 text-left transition flex items-center justify-between">
+        <button onclick="triggerAppDelay('Netflix', 'https://www.netflix.com')" class="bg-[#1c1c1e] hover:bg-gray-800 p-3.5 rounded-xl border border-gray-800 text-left transition flex items-center justify-between">
           <span class="font-bold text-sm text-gray-200">Netflix</span>
           <span class="text-[10px] text-rose-400 bg-rose-950/60 px-2 py-0.5 rounded border border-rose-900/50">5초 대기</span>
         </button>
@@ -126,15 +125,15 @@
   <div id="delayModal" class="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center hidden p-4 z-50">
     <div class="bg-[#1c1c1e] border border-gray-800 p-6 rounded-2xl max-w-sm w-full text-center space-y-4 shadow-2xl">
       <div class="text-4xl animate-pulse">🛑</div>
-      <h3 class="text-xl font-bold text-rose-400"><span id="targetAppName">앱</span> 실행 대기</h3>
+      <h3 class="text-xl font-bold text-rose-400"><span id="targetAppName">사이트</span> 접속 대기</h3>
       <p class="text-xs text-gray-300 leading-relaxed">
-        습관적으로 앱을 켠 것은 아닌가요?<br>
+        습관적으로 접속하려는 것은 아닌가요?<br>
         <strong>5초 동안 스스로에게 질문해 보세요.</strong>
       </p>
 
       <div class="my-4 py-3 bg-black/40 rounded-xl border border-gray-800">
         <span id="countdownText" class="text-5xl font-black text-indigo-400 font-mono">5</span>
-        <p class="text-xs text-gray-500 mt-1">초 후 앱 열기 활성화</p>
+        <p class="text-xs text-gray-500 mt-1">초 후 사이트 이동 활성화</p>
       </div>
 
       <div class="flex gap-2">
@@ -156,7 +155,7 @@
     let appUsageData = {
       'YouTube': { minutes: 0, icon: '▶️' },
       'Instagram': { minutes: 0, icon: '📸' },
-      'KakaoTalk': { minutes: 0, icon: '💬' },
+      'ChatGPT': { minutes: 0, icon: '🤖' },
       'Netflix': { minutes: 0, icon: '🎬' }
     };
 
@@ -187,10 +186,8 @@
       let totalMinsAll = 0;
       sortedApps.forEach(([_, info]) => { totalMinsAll += info.minutes; });
 
-      // 전체 사용량 큰 글씨 갱신
       document.getElementById('totalTimeBig').innerText = formatTime(totalMinsAll);
 
-      // 목표 시간 대비 백분율 계산
       const targetH = parseInt(document.getElementById('targetHours').value) || 0;
       const targetM = parseInt(document.getElementById('targetMinutes').value) || 0;
       const targetTotalMins = (targetH * 60) + targetM;
@@ -212,7 +209,6 @@
         document.getElementById('totalProgressBar').className = "bg-rose-500 h-full rounded-full transition-all duration-500";
       }
 
-      // 개별 앱 리스트 렌더링
       const maxAppMins = Math.max(...sortedApps.map(item => item[1].minutes), 120);
 
       sortedApps.forEach(([appName, info]) => {
@@ -240,11 +236,11 @@
         container.appendChild(row);
       });
 
-      localStorage.setItem('screentime_app_usage_v8', JSON.stringify(appUsageData));
+      localStorage.setItem('screentime_app_usage_v9', JSON.stringify(appUsageData));
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-      const saved = localStorage.getItem('screentime_app_usage_v8');
+      const saved = localStorage.getItem('screentime_app_usage_v9');
       if (saved) {
         try { appUsageData = JSON.parse(saved); } catch(e){}
       }
@@ -259,76 +255,4 @@
       const hours = document.getElementById('targetHours').value;
       const minutes = document.getElementById('targetMinutes').value;
       const dbStatus = document.getElementById('dbStatus');
-      dbStatus.innerText = "저장 중...";
-      try {
-        await supabaseClient.from('screentime_settings').upsert([{ id: 1, target_hours: parseInt(hours), target_minutes: parseInt(minutes), updated_at: new Date() }]);
-        dbStatus.innerText = "DB 연결됨";
-      } catch (e) {
-        dbStatus.innerText = "DB 연결됨";
-      }
-    }
-
-    let countdownTimer = null;
-    let secondsLeft = 5;
-
-    function triggerAppDelay(appName, urlScheme) {
-      currentTargetAppKey = appName;
-      currentAppUrl = urlScheme;
-      document.getElementById('targetAppName').innerText = appName;
-      document.getElementById('delayModal').classList.remove('hidden');
-      
-      secondsLeft = 5;
-      const countdownText = document.getElementById('countdownText');
-      const proceedBtn = document.getElementById('proceedBtn');
-      countdownText.innerText = secondsLeft;
-      proceedBtn.disabled = true;
-      proceedBtn.className = "flex-1 bg-indigo-600 text-white font-semibold py-3 rounded-xl opacity-40 cursor-not-allowed transition text-sm";
-      proceedBtn.innerText = "대기 중...";
-
-      if (countdownTimer) clearInterval(countdownTimer);
-      countdownTimer = setInterval(() => {
-        secondsLeft--;
-        countdownText.innerText = secondsLeft;
-        if (secondsLeft <= 0) {
-          clearInterval(countdownTimer);
-          proceedBtn.disabled = false;
-          proceedBtn.className = "flex-1 bg-rose-600 hover:bg-rose-500 text-white font-semibold py-3 rounded-xl cursor-pointer transition text-sm shadow-lg shadow-rose-900/50";
-          proceedBtn.innerText = "그래도 열기";
-        }
-      }, 1000);
-    }
-
-    function cancelAppExecution() {
-      if (countdownTimer) clearInterval(countdownTimer);
-      document.getElementById('delayModal').classList.add('hidden');
-    }
-
-    function addManualTime(mins) {
-      if (appUsageData[currentTargetAppKey]) {
-        appUsageData[currentTargetAppKey].minutes += mins;
-      } else {
-        appUsageData['YouTube'].minutes += mins;
-      }
-      renderScreenTimeList();
-    }
-
-    function resetStats() {
-      for (let key in appUsageData) {
-        appUsageData[key].minutes = 0;
-      }
-      renderScreenTimeList();
-    }
-
-    function confirmAppExecution() {
-      document.getElementById('delayModal').classList.add('hidden');
-      
-      if (appUsageData[currentTargetAppKey]) {
-        appUsageData[currentTargetAppKey].minutes += 10;
-      }
-      renderScreenTimeList();
-
-      window.location.href = currentAppUrl;
-    }
-  </script>
-</body>
-</html>
+      dbStatus.innerText = "저
