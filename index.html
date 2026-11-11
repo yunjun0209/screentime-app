@@ -25,7 +25,7 @@
     <div class="flex items-center justify-between pt-2 pb-2 border-b border-gray-800">
       <div>
         <h1 class="text-2xl font-bold tracking-tight">스크린 타임</h1>
-        <p class="text-xs text-gray-400 mt-0.5">체류 시간 자동 측정 런처</p>
+        <p class="text-xs text-gray-400 mt-0.5">새창 연동 체류 시간 런처</p>
       </div>
       <button onclick="toggleGrayscale()" class="bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-700 transition">
         👁️ 흑백 모드
@@ -84,9 +84,9 @@
       </div>
     </div>
 
-    <!-- 🌐 웹 런처 (체류 시간 자동 측정 연동) -->
+    <!-- 🌐 새창 연동 웹 런처 -->
     <div class="space-y-3 pt-2">
-      <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider px-1">웹 런처 (5초 딜레이)</h2>
+      <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider px-1">웹 런처 (새창 5초 딜레이)</h2>
       <div class="grid grid-cols-2 gap-2.5">
         <button onclick="triggerAppDelay('YouTube', 'https://m.youtube.com')" class="bg-[#1c1c1e] hover:bg-gray-800 p-3.5 rounded-xl border border-gray-800 text-left transition flex items-center justify-between">
           <span class="font-bold text-sm text-gray-200">YouTube</span>
@@ -127,7 +127,7 @@
 
       <div class="my-4 py-3 bg-black/40 rounded-xl border border-gray-800">
         <span id="countdownText" class="text-5xl font-black text-indigo-400 font-mono">5</span>
-        <p class="text-xs text-gray-500 mt-1">초 후 사이트 이동 활성화</p>
+        <p class="text-xs text-gray-500 mt-1">초 후 새창 이동 활성화</p>
       </div>
 
       <div class="flex gap-2">
@@ -235,18 +235,17 @@
       });
 
       try {
-        localStorage.setItem('screentime_app_usage_v11', JSON.stringify(appUsageData));
+        localStorage.setItem('screentime_app_usage_v12', JSON.stringify(appUsageData));
       } catch(e){}
     }
 
-    // [핵심] 사용자가 외부 사이트로 나갔다가 다시 우리 앱(도파민 컷)으로 돌아올 때 체류 시간 자동 계산
+    // 사용자가 새창에서 돌아와 다시 이 탭을 볼 때 체류 시간 자동 계산
     window.addEventListener('pageshow', function(event) {
       const leftTime = localStorage.getItem('dopamine_left_time');
       const activeApp = localStorage.getItem('dopamine_active_app');
 
       if (leftTime && activeApp) {
         const durationSec = Math.floor((Date.now() - parseInt(leftTime, 10)) / 1000);
-        // 5초 이상 머물렀을 때만 유효한 사용 시간으로 인정 (분 단위 변환, 최소 1분 이상)
         const durationMins = Math.max(Math.round(durationSec / 60), 1);
 
         if (durationSec > 5 && appUsageData[activeApp]) {
@@ -254,14 +253,13 @@
           renderScreenTimeList();
         }
 
-        // 측정 완료 후 초기화
         localStorage.removeItem('dopamine_left_time');
         localStorage.removeItem('dopamine_active_app');
       }
     });
 
     window.addEventListener('DOMContentLoaded', () => {
-      const saved = localStorage.getItem('screentime_app_usage_v11');
+      const saved = localStorage.getItem('screentime_app_usage_v12');
       if (saved) {
         try { appUsageData = JSON.parse(saved); } catch(e){}
       }
@@ -312,7 +310,7 @@
           clearInterval(countdownTimer);
           proceedBtn.disabled = false;
           proceedBtn.className = "flex-1 bg-rose-600 hover:bg-rose-500 text-white font-semibold py-3 rounded-xl cursor-pointer transition text-sm shadow-lg shadow-rose-900/50";
-          proceedBtn.innerText = "계속 이동";
+          proceedBtn.innerText = "새창으로 이동";
         }
       }, 1000);
     }
@@ -332,12 +330,12 @@
     function confirmAppExecution() {
       document.getElementById('delayModal').classList.add('hidden');
       
-      // 외부로 나가는 시점의 시간과 앱 이름을 기록
+      // 나간 시점 기록
       localStorage.setItem('dopamine_left_time', Date.now().toString());
       localStorage.setItem('dopamine_active_app', currentTargetAppKey);
 
-      // 외부 웹사이트로 이동
-      window.location.href = currentAppUrl;
+      // [핵심] 현재 페이지는 그대로 두고 새로운 탭(새창)으로 사이트 열기
+      window.open(currentAppUrl, '_blank');
     }
   </script>
 </body>
