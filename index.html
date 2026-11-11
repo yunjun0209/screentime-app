@@ -3,10 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>도파민 컷 - 스크린타임 차단 & 통계 대시보드</title>
+  <title>도파민 컷 - 핸드폰 실기기 연동 대시보드</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- 스크린타임 시간 그래프용 Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     .grayscale-mode { filter: grayscale(100%); }
@@ -20,7 +19,7 @@
     <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
       <div>
         <h1 class="text-3xl font-extrabold text-indigo-400">도파민 컷 (Dopamine Cut) ⏱️</h1>
-        <p class="text-gray-400 text-xs mt-1">iOS 스크린타임 API & Supabase 실시간 통합 컨트롤러</p>
+        <p class="text-gray-400 text-xs mt-1">아이폰 웹앱 & 실제 앱 실행 연동 컨트롤러</p>
       </div>
       <button onclick="toggleGrayscale()" class="bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs font-semibold px-4 py-2.5 rounded-xl border border-gray-600 transition flex items-center gap-2">
         <span>👁️ 흑백 디스플레이 모드</span>
@@ -31,7 +30,7 @@
     <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700 shadow-xl">
       <h2 class="text-sm font-bold text-gray-300 mb-3 flex items-center justify-between">
         <span>🎯 오늘의 스크린타임 목표</span>
-        <span id="dbStatus" class="text-xs text-green-400">Supabase DB 동기화 완료</span>
+        <span id="dbStatus" class="text-xs text-green-400">Supabase DB 연결됨</span>
       </h2>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
         <div class="flex items-center justify-center gap-2 bg-gray-900 p-3 rounded-xl border border-gray-700 col-span-2">
@@ -46,58 +45,66 @@
       </div>
     </div>
 
-    <!-- 3. 시간 통계 그래프 (발표 자료 핵심 기능) -->
+    <!-- 3. 실시간 스크린타임 사용량 그래프 -->
     <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700 shadow-xl space-y-4">
       <div class="flex items-center justify-between">
         <div>
           <h2 class="text-base font-bold text-indigo-300">📊 스크린타임 시간대별 사용량 그래프</h2>
-          <p class="text-xs text-gray-400">오늘의 시간대별 스마트폰 사용 시간 분석</p>
+          <p class="text-xs text-gray-400">앱 실행 시 사용 시간이 누적하여 갱신됩니다.</p>
         </div>
-        <span class="text-xs bg-indigo-950 text-indigo-300 px-3 py-1 rounded-full font-mono border border-indigo-800">총 1시간 45분</span>
+        <span id="totalTimeBadge" class="text-xs bg-indigo-950 text-indigo-300 px-3 py-1 rounded-full font-mono border border-indigo-800 font-bold">
+          총 0시간 0분
+        </span>
       </div>
       
-      <!-- Chart.js 캔버스 -->
       <div class="bg-gray-900 p-4 rounded-xl border border-gray-700 h-64">
         <canvas id="screentimeChart"></canvas>
       </div>
+
+      <div class="pt-2 border-t border-gray-700/60 flex justify-between items-center">
+        <span class="text-xs text-gray-400">수동 사용량 수치 리셋:</span>
+        <button onclick="resetUsageTime()" class="bg-rose-900/40 hover:bg-rose-800 text-rose-300 text-xs px-3 py-1.5 rounded-lg border border-rose-700 transition">
+          그래프 초기화
+        </button>
+      </div>
     </div>
 
-    <!-- 4. 텍스트 전용 앱 런처 & 5초 딜레이 차단 시뮬레이터 -->
+    <!-- 4. 텍스트 전용 런처 (아이폰 실제 앱 연동) -->
     <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700 shadow-xl space-y-4">
       <div class="flex items-center justify-between">
-        <h2 class="text-base font-bold text-rose-400">🚫 텍스트 전용 앱 런처 & 5초 딜레이</h2>
-        <span class="text-xs text-gray-400">시뮬레이션</span>
+        <h2 class="text-base font-bold text-rose-400">🚫 텍스트 전용 앱 런처 (아이폰 연동)</h2>
+        <span class="text-xs text-green-400 font-mono">Real App DeepLink</span>
       </div>
-      <p class="text-xs text-gray-400">자극적인 앱 아이콘 대신 텍스트로 표기하며, 클릭 시 5초 지연 팝업이 작동합니다.</p>
+      <p class="text-xs text-gray-400">아이콘 없는 텍스트 버튼입니다. 클릭 시 5초 딜레이 후 핸드폰의 실제 앱이 열립니다.</p>
 
       <div class="space-y-2">
         <div class="flex items-center justify-between p-3.5 bg-gray-900 rounded-xl border border-gray-700">
           <div>
-            <p class="text-sm font-bold text-gray-200">YouTube</p>
-            <p class="text-xs text-gray-500">오늘 사용량: 42분</p>
+            <p class="text-base font-bold text-gray-100">YouTube</p>
+            <p id="ytUsageText" class="text-xs text-gray-500">클릭 시 5초 지연 후 유튜브 앱 실행</p>
           </div>
-          <button onclick="triggerAppDelay('유튜브')" class="bg-rose-600 hover:bg-rose-500 text-white text-xs px-4 py-2 rounded-lg font-medium transition">
-            실행 시도 (5초 딜레이)
+          <button onclick="triggerAppDelay('유튜브')" class="bg-rose-600 hover:bg-rose-500 text-white text-xs px-4 py-2.5 rounded-xl font-bold transition">
+            실행하기 (5초 딜레이)
           </button>
         </div>
 
         <div class="flex items-center justify-between p-3.5 bg-gray-900 rounded-xl border border-gray-700">
           <div>
-            <p class="text-sm font-bold text-gray-200">Instagram</p>
-            <p class="text-xs text-gray-500">오늘 사용량: 35분</p>
+            <p class="text-base font-bold text-gray-100">Instagram</p>
+            <p id="instaUsageText" class="text-xs text-gray-500">클릭 시 5초 지연 후 인스타 앱 실행</p>
           </div>
-          <button onclick="triggerAppDelay('인스타그램')" class="bg-rose-600 hover:bg-rose-500 text-white text-xs px-4 py-2 rounded-lg font-medium transition">
-            실행 시도 (5초 딜레이)
+          <button onclick="triggerAppDelay('인스타그램')" class="bg-rose-600 hover:bg-rose-500 text-white text-xs px-4 py-2.5 rounded-xl font-bold transition">
+            실행하기 (5초 딜레이)
           </button>
         </div>
 
         <div class="flex items-center justify-between p-3.5 bg-gray-900 rounded-xl border border-gray-700">
           <div>
-            <p class="text-sm font-bold text-gray-200">TikTok</p>
-            <p class="text-xs text-gray-500">오늘 사용량: 28분</p>
+            <p class="text-base font-bold text-gray-100">TikTok</p>
+            <p id="tiktokUsageText" class="text-xs text-gray-500">클릭 시 5초 지연 후 틱톡 앱 실행</p>
           </div>
-          <button onclick="triggerAppDelay('틱톡')" class="bg-rose-600 hover:bg-rose-500 text-white text-xs px-4 py-2 rounded-lg font-medium transition">
-            실행 시도 (5초 딜레이)
+          <button onclick="triggerAppDelay('틱톡')" class="bg-rose-600 hover:bg-rose-500 text-white text-xs px-4 py-2.5 rounded-xl font-bold transition">
+            실행하기 (5초 딜레이)
           </button>
         </div>
       </div>
@@ -117,7 +124,7 @@
 
       <div class="my-4 py-3 bg-gray-900 rounded-xl border border-gray-700">
         <span id="countdownText" class="text-5xl font-black text-indigo-400 font-mono">5</span>
-        <p class="text-xs text-gray-500 mt-1">초 후 앱 열기 허용</p>
+        <p class="text-xs text-gray-500 mt-1">초 후 진짜 앱 실행 가능</p>
       </div>
 
       <div class="flex gap-2">
@@ -132,20 +139,23 @@
   </div>
 
   <script>
-    // 1. Supabase 연동 설정
+    // 1. Supabase Client 연동
     const SUPABASE_URL = 'https://dphbhbtqadmqptzbdtdi.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_tPHMTej3X-00rY2w2XPNtw_eYWDHyc7';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // 2. 스크린타임 시간 그래프 (Chart.js 초기화)
+    // 2. 그래프 데이터 연동
+    let usageData = [0, 0, 0, 0, 0, 0, 0];
+    const timeLabels = ['06시', '09시', '12시', '15시', '18시', '21시', '24시'];
+
     const ctx = document.getElementById('screentimeChart').getContext('2d');
-    new Chart(ctx, {
+    const myChart = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels: ['06시', '09시', '12시', '15시', '18시', '21시', '24시'],
+        labels: timeLabels,
         datasets: [{
           label: '사용 시간 (분)',
-          data: [10, 25, 40, 15, 30, 20, 5],
+          data: usageData,
           backgroundColor: 'rgba(99, 102, 241, 0.7)',
           borderColor: 'rgba(99, 102, 241, 1)',
           borderWidth: 2,
@@ -160,17 +170,42 @@
         },
         scales: {
           x: { ticks: { color: '#9ca3af' }, grid: { display: false } },
-          y: { ticks: { color: '#9ca3af' }, grid: { color: '#374151' } }
+          y: { ticks: { color: '#9ca3af' }, grid: { color: '#374151' }, beginAtZero: true }
         }
       }
     });
 
-    // 3. 흑백 모드 토글
+    function updateChartUI() {
+      myChart.data.datasets[0].data = usageData;
+      myChart.update();
+
+      const totalMinutes = usageData.reduce((acc, curr) => acc + curr, 0);
+      const hours = Math.floor(totalMinutes / 60);
+      const mins = totalMinutes % 60;
+      
+      document.getElementById('totalTimeBadge').innerText = `총 ${hours}시간 ${mins}분`;
+      localStorage.setItem('screentime_usageData', JSON.stringify(usageData));
+    }
+
+    function resetUsageTime() {
+      usageData = [0, 0, 0, 0, 0, 0, 0];
+      updateChartUI();
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const saved = localStorage.getItem('screentime_usageData');
+      if (saved) {
+        try {
+          usageData = JSON.parse(saved);
+          updateChartUI();
+        } catch(e) {}
+      }
+    });
+
     function toggleGrayscale() {
       document.getElementById('appBody').classList.toggle('grayscale-mode');
     }
 
-    // 4. Supabase DB 연동
     async function saveTargetToSupabase() {
       const hours = document.getElementById('targetHours').value;
       const minutes = document.getElementById('targetMinutes').value;
@@ -192,7 +227,7 @@
       }
     }
 
-    // 5. 5초 딜레이 모달
+    // 3. 5초 딜레이 모달 및 아이폰 실제 앱 실행 (딥링크)
     let countdownTimer = null;
     let secondsLeft = 5;
 
@@ -220,7 +255,7 @@
           countdownText.innerText = "0";
           proceedBtn.disabled = false;
           proceedBtn.className = "flex-1 bg-rose-600 hover:bg-rose-500 text-white font-semibold py-2.5 rounded-xl cursor-pointer transition text-sm shadow-lg";
-          proceedBtn.innerText = "그래도 실행하기";
+          proceedBtn.innerText = "그래도 앱 열기";
         }
       }, 1000);
     }
@@ -230,9 +265,33 @@
       document.getElementById('delayModal').classList.add('hidden');
     }
 
+    // 4. 5초 완료 후 진짜 핸드폰 앱 열기 로직 + 사용시간 10분 추가
     function confirmAppExecution() {
-      alert("[" + document.getElementById('targetAppName').innerText + "] 앱을 실행합니다.");
+      const appName = document.getElementById('targetAppName').innerText;
       document.getElementById('delayModal').classList.add('hidden');
+
+      // 사용 시간 그래프에 10분 추가 반영
+      const currentHour = new Date().getHours();
+      let slotIndex = 2; // 기본 12시
+      if (currentHour < 8) slotIndex = 0;
+      else if (currentHour < 11) slotIndex = 1;
+      else if (currentHour < 14) slotIndex = 2;
+      else if (currentHour < 17) slotIndex = 3;
+      else if (currentHour < 20) slotIndex = 4;
+      else if (currentHour < 23) slotIndex = 5;
+      else slotIndex = 6;
+
+      usageData[slotIndex] += 10;
+      updateChartUI();
+
+      // 아이폰 기기의 실체 앱 딥링크 호출
+      if (appName === '유튜브') {
+        window.location.href = 'youtube://';
+      } else if (appName === '인스타그램') {
+        window.location.href = 'instagram://';
+      } else if (appName === '틱톡') {
+        window.location.href = 'snssdk1128://';
+      }
     }
   </script>
 </body>
