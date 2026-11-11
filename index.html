@@ -25,7 +25,7 @@
     <div class="flex items-center justify-between pt-2 pb-2 border-b border-gray-800">
       <div>
         <h1 class="text-2xl font-bold tracking-tight">스크린 타임</h1>
-        <p class="text-xs text-gray-400 mt-0.5">새창 연동 체류 시간 런처</p>
+        <p class="text-xs text-gray-400 mt-0.5">초과 차단 및 시간 연장형 런처</p>
       </div>
       <button onclick="toggleGrayscale()" class="bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-700 transition">
         👁️ 흑백 모드
@@ -57,12 +57,13 @@
       </div>
     </div>
 
-    <!-- 목표 시간 설정 영역 -->
+    <!-- 목표 시간 설정 및 (+30분, +1시간 연장 버튼) 영역 -->
     <div class="bg-[#1c1c1e] p-4 rounded-2xl border border-gray-800 space-y-3">
       <div class="flex items-center justify-between text-sm font-semibold text-gray-300">
-        <span>🎯 오늘의 목표 제한 시간 설정</span>
+        <span>🎯 오늘의 목표 제한 시간 관리</span>
         <span id="dbStatus" class="text-xs text-green-400 font-mono">DB 연결됨</span>
       </div>
+      
       <div class="flex items-center gap-2">
         <div class="flex-1 flex items-center justify-center gap-2 bg-black/40 p-2.5 rounded-xl border border-gray-800">
           <input id="targetHours" type="number" value="2" min="0" max="24" oninput="updateTargetPreview()" class="w-14 bg-transparent text-center text-xl font-bold text-indigo-400 focus:outline-none">
@@ -72,6 +73,16 @@
         </div>
         <button onclick="saveTargetToSupabase()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs py-3 px-4 rounded-xl transition shadow-md">
           저장
+        </button>
+      </div>
+
+      <!-- 목표 시간 추가 연장 버튼 -->
+      <div class="flex gap-2 pt-1">
+        <button onclick="addExtendTime(30)" class="flex-1 bg-gray-800 hover:bg-gray-700 text-indigo-300 text-xs py-2.5 rounded-xl border border-gray-700 transition font-bold">
+          + 30분 연장하기
+        </button>
+        <button onclick="addExtendTime(60)" class="flex-1 bg-gray-800 hover:bg-gray-700 text-indigo-300 text-xs py-2.5 rounded-xl border border-gray-700 transition font-bold">
+          + 1시간 연장하기
         </button>
       </div>
     </div>
@@ -84,9 +95,9 @@
       </div>
     </div>
 
-    <!-- 🌐 새창 연동 웹 런처 -->
+    <!-- 🌐 웹 런처 -->
     <div class="space-y-3 pt-2">
-      <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider px-1">웹 런처 (새창 5초 딜레이)</h2>
+      <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider px-1">웹 런처 (초과 시 접속 차단)</h2>
       <div class="grid grid-cols-2 gap-2.5">
         <button onclick="triggerAppDelay('YouTube', 'https://m.youtube.com')" class="bg-[#1c1c1e] hover:bg-gray-800 p-3.5 rounded-xl border border-gray-800 text-left transition flex items-center justify-between">
           <span class="font-bold text-sm text-gray-200">YouTube</span>
@@ -118,14 +129,14 @@
   <!-- 5초 딜레이 모달 -->
   <div id="delayModal" class="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center hidden p-4 z-50">
     <div class="bg-[#1c1c1e] border border-gray-800 p-6 rounded-2xl max-w-sm w-full text-center space-y-4 shadow-2xl">
-      <div class="text-4xl animate-pulse">🛑</div>
-      <h3 class="text-xl font-bold text-rose-400"><span id="targetAppName">사이트</span> 접속 대기</h3>
-      <p class="text-xs text-gray-300 leading-relaxed">
+      <div id="modalIcon" class="text-4xl animate-pulse">🛑</div>
+      <h3 id="modalTitle" class="text-xl font-bold text-rose-400"><span id="targetAppName">사이트</span> 접속 대기</h3>
+      <p id="modalDesc" class="text-xs text-gray-300 leading-relaxed">
         습관적으로 접속하려는 것은 아닌가요?<br>
         <strong>5초 동안 스스로에게 질문해 보세요.</strong>
       </p>
 
-      <div class="my-4 py-3 bg-black/40 rounded-xl border border-gray-800">
+      <div id="countdownBox" class="my-4 py-3 bg-black/40 rounded-xl border border-gray-800">
         <span id="countdownText" class="text-5xl font-black text-indigo-400 font-mono">5</span>
         <p class="text-xs text-gray-500 mt-1">초 후 새창 이동 활성화</p>
       </div>
@@ -158,6 +169,7 @@
 
     let currentAppUrl = '';
     let currentTargetAppKey = 'YouTube';
+    let isTimeExceeded = false;
 
     function formatTime(totalMinutes) {
       const h = Math.floor(totalMinutes / 60);
@@ -172,6 +184,19 @@
       const m = parseInt(document.getElementById('targetMinutes').value) || 0;
       document.getElementById('targetDisplay').innerText = h > 0 ? `${h}시간 ${m}분` : `${m}분`;
       renderScreenTimeList();
+    }
+
+    // 목표 시간 연장 기능 (+30분, +1시간)
+    function addExtendTime(minsToAdd) {
+      let h = parseInt(document.getElementById('targetHours').value) || 0;
+      let m = parseInt(document.getElementById('targetMinutes').value) || 0;
+      
+      let totalMins = (h * 60) + m + minsToAdd;
+      document.getElementById('targetHours').value = Math.floor(totalMins / 60);
+      document.getElementById('targetMinutes').value = totalMins % 60;
+      
+      updateTargetPreview();
+      saveTargetToSupabase();
     }
 
     function renderScreenTimeList() {
@@ -200,10 +225,12 @@
       
       const remainMins = targetTotalMins - totalMinsAll;
       if (remainMins > 0) {
+        isTimeExceeded = false;
         document.getElementById('remainingText').innerText = `잔여 여유: ${formatTime(remainMins)}`;
         document.getElementById('totalProgressBar').className = "bg-indigo-500 h-full rounded-full transition-all duration-500";
       } else {
-        document.getElementById('remainingText').innerText = `⚠️ 목표 시간 초과!`;
+        isTimeExceeded = true;
+        document.getElementById('remainingText').innerText = `⚠️ 목표 시간 초과! (접속 차단됨)`;
         document.getElementById('totalProgressBar').className = "bg-rose-500 h-full rounded-full transition-all duration-500";
       }
 
@@ -224,7 +251,7 @@
                 <span class="font-bold text-gray-100">${appName}</span>
                 <span class="text-xs font-mono text-gray-400">${formatTime(info.minutes)}</span>
               </div>
-              <div class="w-full bg-black/50 h-2 rounded-full overflow-hidden border border-gray-800">
+              <div class="w-full bg-black/60 h-2 rounded-full overflow-hidden border border-gray-800">
                 <div class="bg-indigo-500 h-full rounded-full transition-all duration-500" style="width: ${percent}%"></div>
               </div>
             </div>
@@ -235,11 +262,10 @@
       });
 
       try {
-        localStorage.setItem('screentime_app_usage_v12', JSON.stringify(appUsageData));
+        localStorage.setItem('screentime_app_usage_v13', JSON.stringify(appUsageData));
       } catch(e){}
     }
 
-    // 사용자가 새창에서 돌아와 다시 이 탭을 볼 때 체류 시간 자동 계산
     window.addEventListener('pageshow', function(event) {
       const leftTime = localStorage.getItem('dopamine_left_time');
       const activeApp = localStorage.getItem('dopamine_active_app');
@@ -259,7 +285,7 @@
     });
 
     window.addEventListener('DOMContentLoaded', () => {
-      const saved = localStorage.getItem('screentime_app_usage_v12');
+      const saved = localStorage.getItem('screentime_app_usage_v13');
       if (saved) {
         try { appUsageData = JSON.parse(saved); } catch(e){}
       }
@@ -294,9 +320,32 @@
       document.getElementById('targetAppName').innerText = appName;
       document.getElementById('delayModal').classList.remove('hidden');
       
+      const proceedBtn = document.getElementById('proceedBtn');
+      const countdownBox = document.getElementById('countdownBox');
+      const modalIcon = document.getElementById('modalIcon');
+      const modalTitle = document.getElementById('modalTitle');
+      const modalDesc = document.getElementById('modalDesc');
+
+      // [핵심 차단 로직] 목표 시간이 초과된 경우
+      if (isTimeExceeded) {
+        modalIcon.innerText = "🚫";
+        modalTitle.innerText = "접속 차단됨";
+        modalDesc.innerHTML = `<strong class="text-rose-400">오늘의 목표 사용 시간이 모두 소모되었습니다.</strong><br>더 이상 접속할 수 없습니다! 시간을 연장하려면 상단에서 연장 버튼을 누르세요.`;
+        countdownBox.classList.add('hidden');
+        proceedBtn.disabled = true;
+        proceedBtn.className = "flex-1 bg-gray-700 text-gray-500 font-semibold py-3 rounded-xl cursor-not-allowed transition text-sm";
+        proceedBtn.innerText = "접속 불가";
+        return;
+      }
+
+      // 정상 대기 모드
+      modalIcon.innerText = "🛑";
+      modalTitle.innerHTML = `<span id="targetAppName">${appName}</span> 접속 대기`;
+      modalDesc.innerHTML = `습관적으로 접속하려는 것은 아닌가요?<br><strong>5초 동안 스스로에게 질문해 보세요.</strong>`;
+      countdownBox.classList.remove('hidden');
+
       secondsLeft = 5;
       const countdownText = document.getElementById('countdownText');
-      const proceedBtn = document.getElementById('proceedBtn');
       countdownText.innerText = secondsLeft;
       proceedBtn.disabled = true;
       proceedBtn.className = "flex-1 bg-indigo-600 text-white font-semibold py-3 rounded-xl opacity-40 cursor-not-allowed transition text-sm";
@@ -328,13 +377,13 @@
     }
 
     function confirmAppExecution() {
+      if (isTimeExceeded) return; // 초과 시 실행 방지 안전장치
+      
       document.getElementById('delayModal').classList.add('hidden');
       
-      // 나간 시점 기록
       localStorage.setItem('dopamine_left_time', Date.now().toString());
       localStorage.setItem('dopamine_active_app', currentTargetAppKey);
 
-      // [핵심] 현재 페이지는 그대로 두고 새로운 탭(새창)으로 사이트 열기
       window.open(currentAppUrl, '_blank');
     }
   </script>
