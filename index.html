@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>도파민 컷 - 스크린타임 차단 서비스</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex flex-col items-center justify-center p-6">
+  <div class="max-w-md w-full bg-gray-800 p-8 rounded-2xl shadow-xl border border-gray-700 text-center">
+    <h1 class="text-3xl font-bold mb-2 text-indigo-400">도파민 컷 ⏱️</h1>
+    <p class="text-gray-400 mb-6">스마트폰 사용 시간을 줄이고 몰입을 시작하세요.</p>
+    
+    <div class="bg-gray-900 p-6 rounded-xl border border-gray-700 mb-6">
+      <p class="text-sm text-gray-400 mb-1">오늘의 목표 스크린타임</p>
+      <div class="text-4xl font-extrabold text-green-400 mb-2">02 시간 30 분</div>
+      <p class="text-xs text-gray-500">Supabase DB 연동 완료</p>
+    </div>
+
+    <button class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 px-4 rounded-xl transition duration-200 shadow-lg">
+      스크린타임 측정 시작하기
+    </button>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://dphbhbtqadmqptzbdtdi.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_tPHMTej3X-00rY2w2XPNtw_eYWDHyc7';
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    console.log("Supabase 연동 성공!");
+  </script>
+</body>
+</html>
