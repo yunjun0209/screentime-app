@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <!-- 아이폰/아이패드 홈 화면 PWA(웹앱) 최적화 설정 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="도파민 컷">
@@ -16,7 +15,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     .grayscale-mode { filter: grayscale(100%); }
-    /* 웹앱 텍스트 드래그 방지 (진짜 앱처럼 보이게) */
     body { -webkit-user-select: none; user-select: none; }
   </style>
 </head>
@@ -24,21 +22,21 @@
   
   <div class="max-w-2xl w-full space-y-6">
 
-    <!-- 1. 앱 헤더 및 흑백 토글 모드 (웹앱 내부용) -->
+    <!-- 1. 앱 헤더 및 흑백 토글 -->
     <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
       <div>
         <h1 class="text-3xl font-extrabold text-indigo-400">도파민 컷 ⏱️</h1>
-        <p class="text-gray-400 text-xs mt-1">자극 없는 텍스트 기반 앱 런처</p>
+        <p class="text-gray-400 text-xs mt-1">시간·분 자유 설정형 텍스트 런처</p>
       </div>
       <button onclick="toggleGrayscale()" class="bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs font-semibold px-4 py-2.5 rounded-xl border border-gray-600 transition flex items-center gap-2">
         <span>👁️ 런처 흑백 모드</span>
       </button>
     </div>
 
-    <!-- 2. 목표 설정 & Supabase DB 연동 -->
+    <!-- 2. 목표 설정 (시간 & 분 동시 조절) -->
     <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700 shadow-xl">
       <h2 class="text-sm font-bold text-gray-300 mb-3 flex items-center justify-between">
-        <span>🎯 오늘의 허용 목표 시간</span>
+        <span>🎯 오늘의 허용 목표 시간 (시간·분 설정)</span>
         <span id="dbStatus" class="text-xs text-green-400">DB 연결됨</span>
       </h2>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
@@ -54,63 +52,72 @@
       </div>
     </div>
 
-    <!-- 3. 실시간 스크린타임 사용량 그래프 -->
+    <!-- 3. 스크린타임 사용 통계 (일/주/월 & 시간 단위 환산) -->
     <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700 shadow-xl space-y-4">
-      <div class="flex items-center justify-between">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-          <h2 class="text-base font-bold text-indigo-300">📊 런처 경유 사용 통계</h2>
-          <p class="text-xs text-gray-400">앱 런처를 통해 실행한 누적 시간입니다.</p>
+          <h2 class="text-base font-bold text-indigo-300">📊 스크린타임 사용 통계</h2>
+          <p class="text-xs text-gray-400">시간 및 분 단위로 정밀 누적됩니다.</p>
         </div>
-        <span id="totalTimeBadge" class="text-xs bg-indigo-950 text-indigo-300 px-3 py-1 rounded-full font-mono border border-indigo-800 font-bold">
-          총 0시간 0분
-        </span>
+        
+        <div class="flex bg-gray-900 p-1 rounded-xl border border-gray-700 w-full sm:w-auto">
+          <button id="tab-daily" onclick="switchChartTab('daily')" class="flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-lg bg-indigo-600 text-white shadow-md transition">일간</button>
+          <button id="tab-weekly" onclick="switchChartTab('weekly')" class="flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-lg text-gray-400 hover:text-gray-200 transition">주간</button>
+          <button id="tab-monthly" onclick="switchChartTab('monthly')" class="flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-lg text-gray-400 hover:text-gray-200 transition">월간</button>
+        </div>
       </div>
       
-      <div class="bg-gray-900 p-4 rounded-xl border border-gray-700 h-52">
+      <div class="bg-gray-900 p-4 rounded-xl border border-gray-700 h-56 relative">
         <canvas id="screentimeChart"></canvas>
+      </div>
+      
+      <div class="flex justify-between items-center px-1">
+        <span class="text-xs text-gray-500">현재 탭 누적 시간:</span>
+        <span id="totalTimeBadge" class="text-sm text-indigo-400 font-mono font-black">총 0시간 0분</span>
       </div>
     </div>
 
-    <!-- 4. 텍스트 전용 런처 앱 목록 (딥링크 확장판) -->
+    <!-- 4. 텍스트 전용 런처 & 시간 추가 테스트 컨트롤 -->
     <div class="bg-gray-800 p-6 rounded-2xl border border-gray-700 shadow-xl space-y-4">
       <div class="flex items-center justify-between">
         <h2 class="text-base font-bold text-rose-400">🚫 텍스트 전용 실행 런처</h2>
-        <span class="text-xs text-green-400 font-mono">5초 딜레이 활성화</span>
+        <span class="text-xs text-green-400 font-mono">5초 딜레이</span>
       </div>
-      <p class="text-xs text-gray-400 mb-2">화려한 바탕화면 아이콘 대신 이곳의 텍스트를 눌러 접속하세요.</p>
+      <p class="text-xs text-gray-400 mb-2">클릭 시 5초 대기 후 앱이 실행되며 통계에 반영됩니다.</p>
 
       <div class="space-y-3">
-        <!-- 유튜브 -->
         <button onclick="triggerAppDelay('YouTube', 'youtube://')" class="w-full flex items-center justify-between p-4 bg-gray-900 hover:bg-gray-700 rounded-xl border border-gray-700 transition">
           <span class="text-base font-bold text-gray-100">YouTube</span>
           <span class="text-xs text-rose-400 font-bold bg-rose-950 px-2 py-1 rounded">5초 대기</span>
         </button>
-        <!-- 인스타그램 -->
         <button onclick="triggerAppDelay('Instagram', 'instagram://')" class="w-full flex items-center justify-between p-4 bg-gray-900 hover:bg-gray-700 rounded-xl border border-gray-700 transition">
           <span class="text-base font-bold text-gray-100">Instagram</span>
           <span class="text-xs text-rose-400 font-bold bg-rose-950 px-2 py-1 rounded">5초 대기</span>
         </button>
-        <!-- 카카오톡 -->
         <button onclick="triggerAppDelay('KakaoTalk', 'kakaotalk://')" class="w-full flex items-center justify-between p-4 bg-gray-900 hover:bg-gray-700 rounded-xl border border-gray-700 transition">
           <span class="text-base font-bold text-gray-100">카카오톡</span>
           <span class="text-xs text-rose-400 font-bold bg-rose-950 px-2 py-1 rounded">5초 대기</span>
         </button>
-        <!-- 넷플릭스 -->
         <button onclick="triggerAppDelay('Netflix', 'nflx://')" class="w-full flex items-center justify-between p-4 bg-gray-900 hover:bg-gray-700 rounded-xl border border-gray-700 transition">
           <span class="text-base font-bold text-gray-100">Netflix</span>
           <span class="text-xs text-rose-400 font-bold bg-rose-950 px-2 py-1 rounded">5초 대기</span>
         </button>
-        <!-- 엑스(트위터) -->
-        <button onclick="triggerAppDelay('X (Twitter)', 'twitter://')" class="w-full flex items-center justify-between p-4 bg-gray-900 hover:bg-gray-700 rounded-xl border border-gray-700 transition">
-          <span class="text-base font-bold text-gray-100">X (Twitter)</span>
-          <span class="text-xs text-rose-400 font-bold bg-rose-950 px-2 py-1 rounded">5초 대기</span>
+      </div>
+
+      <!-- 시간 단위 테스트용 강제 추가 버튼 -->
+      <div class="pt-3 border-t border-gray-700 flex gap-2">
+        <button onclick="addManualTime(60)" class="flex-1 bg-indigo-950 hover:bg-indigo-900 text-indigo-300 text-xs py-2 rounded-lg border border-indigo-700 transition font-bold">
+          + 1시간 통계 강제 추가
+        </button>
+        <button onclick="resetStats()" class="bg-rose-950 hover:bg-rose-900 text-rose-300 text-xs px-4 py-2 rounded-lg border border-rose-800 transition font-bold">
+          기록 초기화
         </button>
       </div>
     </div>
 
   </div>
 
-  <!-- 5. 5초 딜레이 모달 팝업 -->
+  <!-- 5. 5초 딜레이 모달 -->
   <div id="delayModal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center hidden p-4 z-50">
     <div class="bg-gray-800 border border-gray-700 p-6 rounded-2xl max-w-sm w-full text-center shadow-2xl space-y-4">
       <div class="text-4xl animate-pulse">🛑</div>
@@ -127,7 +134,7 @@
 
       <div class="flex gap-2">
         <button onclick="cancelAppExecution()" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 rounded-xl transition text-sm">
-          포기하기 (추천)
+          포기하기
         </button>
         <button id="proceedBtn" disabled onclick="confirmAppExecution()" class="flex-1 bg-indigo-600 text-white font-semibold py-3 rounded-xl opacity-40 cursor-not-allowed transition text-sm">
           대기 중...
@@ -137,55 +144,94 @@
   </div>
 
   <script>
-    // Supabase 설정
     const SUPABASE_URL = 'https://dphbhbtqadmqptzbdtdi.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_tPHMTej3X-00rY2w2XPNtw_eYWDHyc7';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // 차트 및 사용량 데이터
-    let usageData = [0, 0, 0, 0, 0, 0, 0];
-    const timeLabels = ['06시', '09시', '12시', '15시', '18시', '21시', '24시'];
+    let statsData = {
+      daily: {
+        labels: ['00시', '04시', '08시', '12시', '16시', '20시', '24시'],
+        data: [0, 0, 0, 0, 0, 0, 0]
+      },
+      weekly: {
+        labels: ['월', '화', '수', '목', '금', '토', '일'],
+        data: [0, 0, 0, 0, 0, 0, 0]
+      },
+      monthly: {
+        labels: ['1주차', '2주차', '3주차', '4주차'],
+        data: [0, 0, 0, 0]
+      }
+    };
+    
+    let currentTab = 'daily';
     let currentAppUrl = '';
 
     const ctx = document.getElementById('screentimeChart').getContext('2d');
     const myChart = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels: timeLabels,
+        labels: statsData.daily.labels,
         datasets: [{
-          label: '런처 사용 시간 (분)',
-          data: usageData,
-          backgroundColor: 'rgba(99, 102, 241, 0.7)',
+          label: '사용 시간 (분)',
+          data: statsData.daily.data,
+          backgroundColor: 'rgba(99, 102, 241, 0.8)',
           borderColor: 'rgba(99, 102, 241, 1)',
-          borderWidth: 2,
-          borderRadius: 8
+          borderWidth: 1,
+          borderRadius: 6
         }]
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
+        plugins: { 
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(context) { 
+                const mins = context.parsed.y;
+                const h = Math.floor(mins / 60);
+                const m = mins % 60;
+                return h > 0 ? `약 ${h}시간 ${m}분 (${mins}분)` : `${mins}분`;
+              }
+            }
+          }
+        },
         scales: {
-          x: { ticks: { color: '#9ca3af' }, grid: { display: false } },
+          x: { ticks: { color: '#9ca3af', font: { size: 11 } }, grid: { display: false } },
           y: { ticks: { color: '#9ca3af' }, grid: { color: '#374151' }, beginAtZero: true }
         }
       }
     });
 
-    function updateChartUI() {
-      myChart.data.datasets[0].data = usageData;
+    function switchChartTab(tabName) {
+      currentTab = tabName;
+      ['daily', 'weekly', 'monthly'].forEach(tab => {
+        const btn = document.getElementById('tab-' + tab);
+        if(tab === tabName) {
+          btn.className = "flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-lg bg-indigo-600 text-white shadow-md transition";
+        } else {
+          btn.className = "flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-lg text-gray-400 hover:text-gray-200 transition bg-transparent";
+        }
+      });
+
+      myChart.data.labels = statsData[tabName].labels;
+      myChart.data.datasets[0].data = statsData[tabName].data;
       myChart.update();
-      const totalMinutes = usageData.reduce((acc, curr) => acc + curr, 0);
+      updateTotalBadge();
+    }
+
+    function updateTotalBadge() {
+      const totalMinutes = statsData[currentTab].data.reduce((acc, curr) => acc + curr, 0);
       const hours = Math.floor(totalMinutes / 60);
       const mins = totalMinutes % 60;
       document.getElementById('totalTimeBadge').innerText = `총 ${hours}시간 ${mins}분`;
-      localStorage.setItem('screentime_usageData', JSON.stringify(usageData));
+      localStorage.setItem('screentime_stats_v3', JSON.stringify(statsData));
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-      const saved = localStorage.getItem('screentime_usageData');
+      const saved = localStorage.getItem('screentime_stats_v3');
       if (saved) {
-        usageData = JSON.parse(saved);
-        updateChartUI();
+        statsData = JSON.parse(saved);
+        switchChartTab('daily');
       }
     });
 
@@ -199,7 +245,6 @@
       const dbStatus = document.getElementById('dbStatus');
       dbStatus.innerText = "저장 중...";
       dbStatus.className = "text-xs text-indigo-400";
-
       try {
         await supabaseClient.from('screentime_settings').upsert([{ id: 1, target_hours: parseInt(hours), target_minutes: parseInt(minutes), updated_at: new Date() }]);
         dbStatus.innerText = "✅ DB 저장 완료";
@@ -210,7 +255,6 @@
       }
     }
 
-    // 5초 딜레이 및 딥링크 실행 로직
     let countdownTimer = null;
     let secondsLeft = 5;
 
@@ -218,18 +262,15 @@
       currentAppUrl = urlScheme;
       document.getElementById('targetAppName').innerText = appName;
       document.getElementById('delayModal').classList.remove('hidden');
-      
       secondsLeft = 5;
       const countdownText = document.getElementById('countdownText');
       const proceedBtn = document.getElementById('proceedBtn');
-      
       countdownText.innerText = secondsLeft;
       proceedBtn.disabled = true;
       proceedBtn.className = "flex-1 bg-indigo-600 text-white font-semibold py-3 rounded-xl opacity-40 cursor-not-allowed transition text-sm";
       proceedBtn.innerText = "대기 중...";
 
       if (countdownTimer) clearInterval(countdownTimer);
-
       countdownTimer = setInterval(() => {
         secondsLeft--;
         countdownText.innerText = secondsLeft;
@@ -247,24 +288,51 @@
       document.getElementById('delayModal').classList.add('hidden');
     }
 
+    // 시간 단위(분 단위 겸용) 데이터 누적 적용 함수
+    function addTimeData(minutesToAdd) {
+      const now = new Date();
+      const currentHour = now.getHours();
+      const currentDay = now.getDay();
+      
+      let dailyIndex = 3;
+      if (currentHour < 4) dailyIndex = 0;
+      else if (currentHour < 8) dailyIndex = 1;
+      else if (currentHour < 12) dailyIndex = 2;
+      else if (currentHour < 16) dailyIndex = 3;
+      else if (currentHour < 20) dailyIndex = 4;
+      else if (currentHour < 24) dailyIndex = 5;
+      statsData.daily.data[dailyIndex] += minutesToAdd;
+
+      const weekIndex = currentDay === 0 ? 6 : currentDay - 1; 
+      statsData.weekly.data[weekIndex] += minutesToAdd;
+
+      const date = now.getDate();
+      let monthIndex = 0;
+      if (date > 7 && date <= 14) monthIndex = 1;
+      else if (date > 14 && date <= 21) monthIndex = 2;
+      else if (date > 21) monthIndex = 3;
+      statsData.monthly.data[monthIndex] += minutesToAdd;
+
+      switchChartTab(currentTab);
+    }
+
+    function addManualTime(mins) {
+      addTimeData(mins);
+    }
+
+    function resetStats() {
+      statsData = {
+        daily: { labels: ['00시', '04시', '08시', '12시', '16시', '20시', '24시'], data: [0, 0, 0, 0, 0, 0, 0] },
+        weekly: { labels: ['월', '화', '수', '목', '금', '토', '일'], data: [0, 0, 0, 0, 0, 0, 0] },
+        monthly: { labels: ['1주차', '2주차', '3주차', '4주차'], data: [0, 0, 0, 0] }
+      };
+      switchChartTab(currentTab);
+    }
+
     function confirmAppExecution() {
       document.getElementById('delayModal').classList.add('hidden');
-
-      // 1. 실행할 때마다 현재 시간대 그래프에 +10분씩 자동 추가 (시연용)
-      const currentHour = new Date().getHours();
-      let slotIndex = 2;
-      if (currentHour < 8) slotIndex = 0;
-      else if (currentHour < 11) slotIndex = 1;
-      else if (currentHour < 14) slotIndex = 2;
-      else if (currentHour < 17) slotIndex = 3;
-      else if (currentHour < 20) slotIndex = 4;
-      else if (currentHour < 23) slotIndex = 5;
-      else slotIndex = 6;
-
-      usageData[slotIndex] += 10;
-      updateChartUI();
-
-      // 2. 패드/폰의 진짜 앱 열기
+      // 기본 앱 실행 시 5분 누적 (원하시면 수정 가능) + 시간 단위 추가 테스트 가능
+      addTimeData(5);
       window.location.href = currentAppUrl;
     }
   </script>
